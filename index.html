@@ -13,12 +13,20 @@
     <link rel="stylesheet" href="css/material-icons.css">
     <link rel="stylesheet" href="css/kitchen-sink.css">
     <link rel="icon" href="img/icon.png">
+    <style>
+        .reload-details-key{
+            color: grey;
+        }
+        .reload-details-value{
+            font-size: 15px;
+        }
+    </style>
 </head>
 <body>
     <div class="views">
         <div class="view view-main">
             <div class="pages navbar-fixed">
-                <div data-page="index" class="page">
+                <!--<div data-page="index" class="page">
                     <div class="navbar">
                         <div class="navbar-inner">
                             <div class="center">Framework7</div>
@@ -444,6 +452,37 @@
                             </ul>
                         </div>
                     </div>
+                </div>-->
+                <div data-page="index" class="page">
+                    <div class="page-content login-screen-content">
+                        <div class="login-screen-title">
+                            <img src="img/ESF_logo.jpg" width="200" height="200" /><br />Ticketeer
+                        </div>
+                        <form>
+                            <div class="list-block inputs-list">
+                                <ul>
+                                    <li class="item-content">
+                                        <div class="item-inner">
+                                            <div class="item-input">
+                                                <input type="text" name="username" placeholder="Username" />
+                                            </div>
+                                        </div>
+                                    </li>
+                                    <li class="item-content">
+                                        <div class="item-inner">
+                                            <div class="item-input">
+                                                <input type="password" name="password" placeholder="Password" />
+                                            </div>
+                                        </div>
+                                    </li>
+                                </ul>
+                            </div>
+                            <div class="content-block"><a href="main.html" class="button button-big">Sign In</a></div>
+                            <div class="content-block">
+                                <div class="list-block-label">QR-based Ticketing Manager.<br>Report bugs to shawngoh87@hotmail.com</div>
+                            </div>
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>
@@ -453,15 +492,15 @@
     <script type="text/javascript" src="dist/js/framework7.js"></script>
     <script type="text/javascript" src="js/kitchen-sink.js"></script>
     <script>
-        function test() {
+        function reload() {
             
             // Init QR Scanner
             var done = function (err, status) {
                 if (err) {
                     alert(err._message);
                 } else {
-                    alert('QRScanner is initialized. Status:');
-                    alert(status);
+                    //alert('QRScanner is initialized. Status:');
+                    //alert(status);
                 }
             };
             QRScanner.prepare(done);
@@ -475,16 +514,110 @@
                 );
 
             // If scanned, show all elements
-            var scanned = function (err, contents) {
+            var scanned = function (err, uid) {
                 if (err) {
                     alert(err._message);
                 }
-                alert('URL: ' + contents);
+                alert('URL: ' + uid);
                 $("html").find('*').attr('style', '');
+
+                //mainView.router.loadPage('reload.html');
+
+                var str1 = '<div data-page="reload" class="page"> <div class="page-content login-screen-content"> <div class="login-screen-title"> Reload </div> <div class="content-block"> <div class="list-block inputs-list"> <ul> <li class="item-content"> <div class="item-inner"> <div class="row"> <div class="col-33 reload-details-key">Name</div> <div class="col-66 reload-details-value">';
+                var str2 = '</div> </div> </div> </li> <li class="item-content"> <div class="item-inner"> <div class="row"> <div class="col-33 reload-details-key">UID</div> <div class="col-66 reload-details-value">';
+                var str3 = '</div> </div> </div> </li> <li class="item-content"> <div class="item-inner"> <div class="row"> <div class="col-33 reload-details-key">Amount</div> <div class="col-66 reload-details-value">';
+                var str4 = '</div> </div> </div> </li> <li class="item-content"> <div class="item-inner"> <div class="row"> <div class="col-33 reload-details-key">Remark</div> <div class="col-66 reload-details-value">';
+                var str5 = '</div> </div> </div> </li> </ul> </div> <div class="content-block"><a href="main.html" class="button button-big" onclick="alert(\'Reloaded!\');">Confirm</a></div> </div> </div></div>';
+                var user = {
+                    name: "Lorem Ipsum",
+                    uid: "12ef-4352-7ae9-1bc4",
+                    amount: 5,
+                    remark: "a bit retarded"
+                }
+
+                var strPage = str1 + user.name + str2 + user.uid + str3 + user.amount + str4 + user.remark + str5;
+                mainView.loadContent(strPage);
             };
             QRScanner.scan(scanned);
 
             QRScanner.show();
+
+
+        }
+
+        function deduct() {
+
+            // Init QR Scanner
+            var done = function (err, status) {
+                if (err) {
+                    alert(err._message);
+                } else {
+                    //alert('QRScanner is initialized. Status:');
+                    //alert(status);
+                }
+            };
+            QRScanner.prepare(done);
+
+            // Hide all elements for preview
+            $("html").find('*').attr('style',
+                '   background: none transparent !important; \
+                    color: none transparent !important; \
+                    display: none;\
+                '
+                );
+
+            // If scanned, show all elements
+            var scanned = function (err, uid) {
+                if (err) {
+                    alert(err._message);
+                }
+                alert('URL: ' + uid);
+                $("html").find('*').attr('style', '');
+
+                //mainView.router.loadPage('reload.html');
+
+                var str1 = '<div data-page="deduct" class="page"> <div class="page-content login-screen-content"> <div class="login-screen-title"> Deduct </div> <div class="content-block"> <div class="list-block inputs-list"> <ul> <li class="item-content"> <div class="item-inner"> <div class="row"> <div class="col-33 reload-details-key">Name</div> <div class="col-66 reload-details-value">';
+                var str2 = '</div> </div> </div> </li> <li class="item-content"> <div class="item-inner"> <div class="row"> <div class="col-33 reload-details-key">UID</div> <div class="col-66 reload-details-value">';
+                var str3 = '</div> </div> </div> </li> <li class="item-content"> <div class="item-inner"> <div class="row"> <div class="col-33 reload-details-key">Amount</div> <div class="col-66 reload-details-value">';
+                var str4 = '</div> </div> </div> </li> <li class="item-content"> <div class="item-inner"> <div class="row"> <div class="col-33 reload-details-key">Remark</div> <div class="col-66 reload-details-value">';
+                var str5 = '</div> </div> </div> </li> </ul> </div> <div class="content-block"><a href="main.html" class="button button-big" onclick="alert(\'Deducted!\');">Confirm</a></div> </div> </div></div>';
+                var user = {
+                    name: "Lorem Ipsum",
+                    uid: "12ef-4352-7ae9-1bc4",
+                    amount: 5,
+                    remark: "a bit retarded"
+                }
+
+                var strPage = str1 + user.name + str2 + user.uid + str3 + user.amount + str4 + user.remark + str5;
+                mainView.loadContent(strPage);
+                //var pageContentHeader = '<div data-page="vehicle-history" class="page"> <div class="navbar"> <div class="navbar-inner"> <div class="left"><a href="#" class="back link icon-only"><i class="icon icon-back"></i></a></div> <div class="center">History</div> </div> </div> <div class="page-content vehicle-history-page">';
+                //var pageContentFooter = '</div></div>';
+                //var pageContent = '';
+
+                //var history = Db.user.cars[carPlate].history; // Clone it to prevent async bugs
+                //for (var eachHistory in history) {
+                //    var historyInstance = history[eachHistory];
+
+                //    // For readability purpose
+                //    var str1 = '<div class="card"> <div class="card-header">';
+                //    var loc = historyInstance.address;
+                //    var str2 = '</div> <div class="card-footer"> <div class="col-75">';
+                //    var dur = historyInstance.duration;
+                //    var str3 = '</div> <div class="col-25">';
+                //    var total = historyInstance.amount;
+                //    var str4 = '</div> </div> </div>';
+
+                //    pageContent += (str1 + loc + str2 + dur + str3 + total + str4);
+                //    $$('.vehicle-history-page').append(str1 + loc + str2 + dur + str3 + total + str4);
+                //}
+                //mainView.loadContent(pageContentHeader + pageContent + pageContentFooter);
+
+            };
+            QRScanner.scan(scanned);
+
+            QRScanner.show();
+
+
         }
     </script>
 </body>
