@@ -1,0 +1,49 @@
+{
+	"admin":{
+		"clearance_list":{
+			"VAR - CLEARANCE LEVEL":{ // string - Code for clearance level e.g. admin is A1 and moderator is B2 (use alphabets first)
+				"description": "string - description of access level e.g. moderator/admin/executives",
+				"accessables":{
+					"VAR - ACCESS ITEMS":{ // string - stuffs with access blocking e.g. general settings, adding/removing managers
+
+					}
+				}
+			}
+		}
+	},
+
+	"execs":{
+		"UID": { // string - 28 unique hex char
+			"management":{
+				"access-tier": "number - access level of the executive",
+				"description": "string - description of the access level"
+			},
+			"transactions":{
+				"TRANSACTIONID":{
+          "user": "string - UID of user of operation",
+          "user_name": "string - name of user of operation",
+					"timestamp": "number - timestamp",
+					"amount": "number - amount of money used on operation",
+					"operation": "string - reload/deduct"
+				}
+			}
+		}
+	},
+
+	"users":{
+		"UID":{ // string - 28 unique hex char
+			"name":"string - real name",
+			"course":"string - abbreviated course name e.g. MH, EE, BI",
+			"timestamp_reg":"number - timestamp",
+			"transactions":{
+				"TRANSACTIONID":{ // string - UID + timestamp
+          "exec": "string - UID of exec in charge",
+          "exec_name":  "string - name of exec in charge",
+					"timestamp": "number - timestamp",
+					"amount": "number - amount of money used on operation",
+					"operation": "string - reload/deduct"
+				}
+			}
+		}
+	}
+}
