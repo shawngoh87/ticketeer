@@ -19,7 +19,7 @@
 				"description": "string - description of the access level"
 			},
 			"transactions":{
-				"TRANSACTIONID":{
+				"TRANSACTIONID":{ // string - timestamp
           "user": "string - UID of user of operation",
           "user_name": "string - name of user of operation",
 					"timestamp": "number - timestamp",
@@ -34,9 +34,10 @@
 		"UID":{ // string - 28 unique hex char
 			"name":"string - real name",
 			"course":"string - abbreviated course name e.g. MH, EE, BI",
-			"timestamp_reg":"number - timestamp",
+      "timestamp_reg": "number - timestamp",
+      "balance": "number - amount left",
 			"transactions":{
-				"TRANSACTIONID":{ // string - UID + timestamp
+				"TRANSACTIONID":{ // string - timestamp
           "exec": "string - UID of exec in charge",
           "exec_name":  "string - name of exec in charge",
 					"timestamp": "number - timestamp",

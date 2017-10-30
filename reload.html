@@ -1,5 +1,12 @@
 ﻿<div data-page="reload" class="page">
     <div class="page-content login-screen-content">
+        <div class="navbar">
+            <div class="navbar-inner">
+                <div class="left"><a href="index.html" class="back link icon-only"><i class="icon icon-back"></i></a></div>
+                <div class="center"></div>
+                <div class="right"></div>
+            </div>
+        </div>
         <div class="login-screen-title">
             Reload
         </div>
@@ -25,16 +32,17 @@
                     <li class="item-content">
                         <div class="item-inner">
                             <div class="row">
-                                <div class="col-33 reload-details-key">Amount</div>
-                                <div class="col-66 reload-details-value">5.00</div>
+                                <div class="col-33 reload-details-key">Balance</div>
+                                <div class="col-66 reload-details-value balance-var" value="10">10</div>
                             </div>
                         </div>
                     </li>
                     <li class="item-content">
                         <div class="item-inner">
                             <div class="row">
-                                <div class="col-33 reload-details-key">Remark</div>
-                                <div class="col-66 reload-details-value">Stuffs</div>
+                                <a href="#" class="button button-raised col-33" value="1" onclick="showReloadResult(this);">RM1</a>
+                                <a href="#" class="button button-raised col-33" value="2" onclick="showReloadResult(this);">RM2</a>
+                                <a href="#" class="button button-raised col-33" value="5" onclick="showReloadResult(this);">RM5</a>
                             </div>
                         </div>
                     </li>

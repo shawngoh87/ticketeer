@@ -1,18 +1,21 @@
 ﻿
-<div data-page="main" class="page" >
+<div data-page="main" class="page">
+    <div class="navbar">
+        <div class="navbar-inner">
+            <!--<div class="left scanner-back"><a href="main.html" class="link icon-only"><i class="icon icon-back"></i></a></div>-->
+            <!--<div class="center"></div>-->
+            <div class="right"><a href="#" class="link" onclick="logout();">Logout</a></div>
+        </div>
+    </div>
     <div class="page-content" >
-        <!--<div class="content-block-title">Raised Buttons</div>-->
         <div class="content-block">
             <p class="buttons-row"><a href="#" class="button button-raised" onclick="reload();">Reload</a></p>
         </div>
         <div class="content-block">
-            <p class="buttons-row"><a href="#" class="button button-raised">Deduct</a></p>
+            <p class="buttons-row"><a href="#" class="button button-raised" onclick="deduct();">Deduct</a></p>
         </div>
         <div class="content-block">
-            <p class="buttons-row"><a href="#" class="button button-raised">History</a></p>
-        </div>
-        <div class="content-block">
-            <p class="buttons-row"><a href="index.html" class="button button-raised">Logout</a></p>
+            <p class="buttons-row"><a href="#" class="button button-raised" onclick="history();">History</a></p>
         </div>
     </div>
 </div>

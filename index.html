@@ -21,9 +21,12 @@
         .reload-details-value {
             font-size: 15px;
         }
+        .words-login{
+            font-size:18px;
+        }
     </style>
 </head>
-<body>
+<body class="theme-indigo">
     <div class="views">
         <div class="view view-main">
             <div class="pages navbar-fixed">
@@ -459,30 +462,34 @@
                         <div class="login-screen-title">
                             <img src="img/ESF_logo.png" width="200" height="200" /><br />Ticketeer
                         </div>
-                        <form>
+                        <div class="index-preloader" style="text-align:center;" hidden>
+                            <span class="preloader preloader-black"></span><br />
+                            <span class="words-login">Logging In ...</span>
+                        </div>
+                        <div class="form-login">
                             <div class="list-block inputs-list">
                                 <ul>
                                     <li class="item-content">
                                         <div class="item-inner">
                                             <div class="item-input">
-                                                <input type="text" name="username" placeholder="Username" />
+                                                <input type="text" name="username" class="user-email" placeholder="Username" />
                                             </div>
                                         </div>
                                     </li>
                                     <li class="item-content">
                                         <div class="item-inner">
                                             <div class="item-input">
-                                                <input type="password" name="password" placeholder="Password" />
+                                                <input type="password" name="password" class="user-pw" placeholder="Password" />
                                             </div>
                                         </div>
                                     </li>
                                 </ul>
                             </div>
-                            <div class="content-block"><a href="main.html" class="button button-big">Sign In</a></div>
+                            <div class="content-block"><a href="#" class="button button-big button-login" onclick="login();">Log In</a></div>
                             <div class="content-block">
-                                <div class="list-block-label">QR-based Ticketing Manager.<br>Report bugs to shawngoh87@hotmail.com</div>
+                                <div class="list-block-label">QR-based Ticketing Manager.<br>Report bugs <a>here</a></div>
                             </div>
-                        </form>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -500,12 +507,12 @@
             storageBucket: "",
             messagingSenderId: "1070833005119"
         };
-        try { firebase.initializeApp(config); alert('Success');}
+        try { firebase.initializeApp(config);}
         catch(err){alert(err)}
     </script>
     <script type="text/javascript" src="cordova.js"></script>
     <script type="text/javascript" src="dist/js/framework7.js"></script>
-    <script type="text/javascript" src="js/kitchen-sink.js"></script>
+    <!--<script type="text/javascript" src="js/kitchen-sink.js"></script>-->
     <script type="text/javascript" src="js/main.js"></script>
 </body>
 </html>
