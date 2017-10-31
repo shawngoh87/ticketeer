@@ -9,15 +9,21 @@ var mainView = myApp.addView('.view-main', {});
 var onScan = false;
 
 /* Global Namespace*/
+var DB = {};
+DB.exec = null;
+DB.permission = {};
 
 /* Authentication */
 firebase.auth().onAuthStateChanged(function (user) {
     if (user) {
-        mainView.router.loadPage('main.html');
-        setTimeout(() => {
-            $$('.index-preloader').hide();
-            $$('.form-login').show();
-        }, 1000);
+        alert(user.uid);
+        initDB(user.uid, function () {
+            mainView.router.loadPage('main.html');
+            setTimeout(() => {
+                $$('.index-preloader').hide();
+                $$('.form-login').show();
+            }, 1000);
+        });
     }
     else {
         // User signed out.
@@ -25,13 +31,36 @@ firebase.auth().onAuthStateChanged(function (user) {
     }
 });
 
-function login(){
+function initDB(uid, callback) {
+    firebase.database().ref('execs/' + uid).once('value', function (data) {
+        var exec = data.val();
+        if (exec === null) {
+            alert('Unregistered executive.');
+            return;
+        }
+        DB.permission = {
+            access: exec.clearance.access,
+            description: exec.clearance.description
+        }
+        firebase.database().ref('admin/clearance/' + DB.permission.access + '/accessables/').once('value', function (data) {
+            DB.permission.accessables = data.val();
+            alert(DB.permission.accessables.member.add);
+            callback.call();
+        }).catch(function (err) {
+            alert(err);
+        });;
+    }).catch(function (err) {
+        alert(err);
+    });;
+}
+
+function login() {
     $$('.form-login').hide();
     $$('.index-preloader').show();
     var email = $$('.user-email').val();
     var pw = $$('.user-pw').val();
-    try{
-        firebase.auth().signInWithEmailAndPassword(email, pw).then(function(){}).catch(function (error) {
+    try {
+        firebase.auth().signInWithEmailAndPassword(email, pw).then(function () { }).catch(function (error) {
             // Handle Errors here.
             $$('.form-login').show();
             $$('.index-preloader').hide();
@@ -66,12 +95,6 @@ function hideAll() {
             display: none;\
         '
     );
-    //$("html").find('div').attr('style', '');
-    //$("html").find('div').attr('style',
-    //    '   background: white; \
-    //        display: block;\
-    //    '
-    //);
 }
 
 function logout() {
@@ -83,7 +106,7 @@ function logout() {
         }).catch(function (err) {
             alert(err);
         });
-        
+
     });
 }
 
@@ -135,12 +158,12 @@ function confirmTransaction(op) {
             })
             .then(function () {
                 firebase.database().ref('execs/' + 'execA' + '/transactions/' + timestamp).update({
-                        "user_name": user_name,
-                        "user_uid": uid,
-                        "timestamp": timestamp,
-                        "amount": amount,
-                        "operation": op
-                    })
+                    "user_name": user_name,
+                    "user_uid": uid,
+                    "timestamp": timestamp,
+                    "amount": amount,
+                    "operation": op
+                })
                 .then(function () {
                     myApp.hideIndicator();
                     mainView.router.loadPage('main.html');
@@ -175,91 +198,95 @@ function confirmTransaction(op) {
 
 function reload() {
 
-    // If scanned, show all elements
-    var scanned = function (err, uid) {
-        if (err) {
-            alert(err._message);
-        }
+    cordova.plugins.barcodeScanner.scan(
+      function (result) {
+          alert(result.text);
+          if (result.cancelled) {
+              mainView.router.loadPage('main.html');
+              $$('.page-on-left').remove();
+              mainView.history = ['index.html'];
+              return;
+          }
+          var uid = result.text;
+          //TODO: check for result.format and figure out what button triggers result.cancelled.
+          onScan = false;
+          myApp.showIndicator();
 
-        onScan = false;
-        myApp.showIndicator();
-        $("html").find('*').attr('style', '');
+          var str1 = '<div data-page="reload" class="page"> <div class="page-content login-screen-content"> <div class="navbar"> <div class="navbar-inner"> <div class="left"><a href="index.html" class="back link icon-only"><i class="icon icon-back"></i></a></div> <div class="center"></div> <div class="right"></div> </div> </div> <div class="login-screen-title"> Reload </div> <div class="content-block"> <div class="list-block inputs-list"> <ul> <li class="item-content"> <div class="item-inner"> <div class="row"> <div class="col-33 reload-details-key">Name</div> <div class="col-66 reload-details-value name">';
+          var str2 = '</div> </div> </div> </li> <li class="item-content"> <div class="item-inner"> <div class="row"> <div class="col-33 reload-details-key">UID</div> <div class="col-66 reload-details-value uid">';
+          var str3 = '</div> </div> </div> </li> <li class="item-content"> <div class="item-inner"> <div class="row"> <div class="col-33 reload-details-key">Balance</div> <div class="col-66 reload-details-value balance-var" value="';
+          var str4 = '">';
+          var str5 = '</div> </div> </div> </li> <li class="item-content"> <div class="item-inner"> <div class="row"> <a href="#" class="button button-raised col-33" value="1" onclick="showReloadResult(this);">RM1</a> <a href="#" class="button button-raised col-33" value="2" onclick="showReloadResult(this);">RM2</a> <a href="#" class="button button-raised col-33" value="5" onclick="showReloadResult(this);">RM5</a> </div> </div> </li> </ul> </div> <div class="content-block"><a href="#" class="button button-big" onclick="confirmTransaction(\'reload\');">Confirm</a></div> </div> </div></div>';
 
-        var str1 = '<div data-page="reload" class="page"> <div class="page-content login-screen-content"> <div class="navbar"> <div class="navbar-inner"> <div class="left"><a href="index.html" class="back link icon-only"><i class="icon icon-back"></i></a></div> <div class="center"></div> <div class="right"></div> </div> </div> <div class="login-screen-title"> Reload </div> <div class="content-block"> <div class="list-block inputs-list"> <ul> <li class="item-content"> <div class="item-inner"> <div class="row"> <div class="col-33 reload-details-key">Name</div> <div class="col-66 reload-details-value name">';
-        var str2 = '</div> </div> </div> </li> <li class="item-content"> <div class="item-inner"> <div class="row"> <div class="col-33 reload-details-key">UID</div> <div class="col-66 reload-details-value uid">';
-        var str3 = '</div> </div> </div> </li> <li class="item-content"> <div class="item-inner"> <div class="row"> <div class="col-33 reload-details-key">Balance</div> <div class="col-66 reload-details-value balance-var" value="';
-        var str4 = '">';
-        var str5 = '</div> </div> </div> </li> <li class="item-content"> <div class="item-inner"> <div class="row"> <a href="#" class="button button-raised col-33" value="1" onclick="showReloadResult(this);">RM1</a> <a href="#" class="button button-raised col-33" value="2" onclick="showReloadResult(this);">RM2</a> <a href="#" class="button button-raised col-33" value="5" onclick="showReloadResult(this);">RM5</a> </div> </div> </li> </ul> </div> <div class="content-block"><a href="#" class="button button-big" onclick="confirmTransaction(\'reload\');">Confirm</a></div> </div> </div></div>';
-
-        firebase.database().ref('users/' + uid).once('value', function (data) {
-            var user = data.val();
-            var strPage = str1 + user.name + str2 + uid + str3 + user.balance + str4 + user.balance + str5;
-            mainView.loadContent(strPage);
-            myApp.hideIndicator();
-        }).catch(function (err) {
-            myApp.hideIndicator();
-            alert(err);
-        });
-    };
-
-    // Init QR Scanner
-    var done = function (err, status) {
-        if (err) {
-            alert(err._message);
-            return;
-        }
-        hideAll();
-        QRScanner.scan(scanned);
-        QRScanner.show();
-    };
-
-    onScan = true;
-    QRScanner.prepare(done);
+          firebase.database().ref('users/' + uid).once('value', function (data) {
+              if (data.val() !== null) {
+                  var user = data.val();
+                  var strPage = str1 + user.name + str2 + uid + str3 + user.balance + str4 + user.balance + str5;
+                  mainView.loadContent(strPage);
+                  myApp.hideIndicator();
+              }
+              else {
+                  alert('User does not exist.');
+                  mainView.router.loadPage('main.html');
+                  $$('.page-on-left').remove();
+                  mainView.history = ['index.html'];
+                  myApp.hideIndicator();
+              }
+          }, function (err) {
+              myApp.hideIndicator();
+              alert(err);
+          }).catch(function (err) {
+              myApp.hideIndicator();
+              alert(err);
+          });
+      },
+      function (error) {
+          alert("Scanning failed: " + error);
+          mainView.router.loadPage('main.html');
+          $$('.page-on-left').remove();
+          mainView.history = ['index.html'];
+      }
+   );
 }
 
 function deduct() {
 
-    // If scanned, show all elements
-    var scanned = function (err, uid) {
-        if (err) {
-            alert(err._message);
-            return;
-        }
+    cordova.plugins.barcodeScanner.scan(
+     function (result) {
+         if (result.cancelled) {
+             mainView.router.loadPage('main.html');
+             $$('.page-on-left').remove();
+             mainView.history = ['index.html'];
+             return;
+         }
+         var uid = result.text;
+         //TODO: check for result.format and figure out what button triggers result.cancelled.
+         onScan = false;
+         myApp.showIndicator();
 
-        onScan = false;
-        myApp.showIndicator();
-        $("html").find('*').attr('style', '');
+         var str1 = '<div data-page="deduct" class="page"> <div class="page-content login-screen-content"> <div class="navbar"> <div class="navbar-inner"> <div class="left"><a href="index.html" class="back link icon-only"><i class="icon icon-back"></i></a></div> <div class="center"></div> <div class="right"></div> </div> </div> <div class="login-screen-title"> Deduct </div> <div class="content-block"> <div class="list-block inputs-list"> <ul> <li class="item-content"> <div class="item-inner"> <div class="row"> <div class="col-33 reload-details-key">Name</div> <div class="col-66 reload-details-value name">';
+         var str2 = '</div> </div> </div> </li> <li class="item-content"> <div class="item-inner"> <div class="row"> <div class="col-33 reload-details-key">UID</div> <div class="col-66 reload-details-value uid">';
+         var str3 = '</div> </div> </div> </li> <li class="item-content"> <div class="item-inner"> <div class="row"> <div class="col-33 reload-details-key">Balance</div> <div class="col-66 reload-details-value balance-var" value="';
+         var str4 = '">';
+         var str5 = '</div> </div> </div> </li> <li class="item-content"> <div class="item-inner"> <div class="row"> <a href="#" class="button button-raised col-33" value="1" onclick="showDeductResult(this);">RM1</a> <a href="#" class="button button-raised col-33" value="2" onclick="showDeductResult(this);">RM2</a> <a href="#" class="button button-raised col-33" value="5" onclick="showDeductResult(this);">RM5</a> </div> </div> </li> </ul> </div> <div class="content-block"><a href="#" class="button button-big" onclick="confirmTransaction(\'deduct\');">Confirm</a></div> </div> </div></div>';
 
-        var str1 = '<div data-page="deduct" class="page"> <div class="page-content login-screen-content"> <div class="navbar"> <div class="navbar-inner"> <div class="left"><a href="index.html" class="back link icon-only"><i class="icon icon-back"></i></a></div> <div class="center"></div> <div class="right"></div> </div> </div> <div class="login-screen-title"> Deduct </div> <div class="content-block"> <div class="list-block inputs-list"> <ul> <li class="item-content"> <div class="item-inner"> <div class="row"> <div class="col-33 reload-details-key">Name</div> <div class="col-66 reload-details-value name">';
-        var str2 = '</div> </div> </div> </li> <li class="item-content"> <div class="item-inner"> <div class="row"> <div class="col-33 reload-details-key">UID</div> <div class="col-66 reload-details-value uid">';
-        var str3 = '</div> </div> </div> </li> <li class="item-content"> <div class="item-inner"> <div class="row"> <div class="col-33 reload-details-key">Balance</div> <div class="col-66 reload-details-value balance-var" value="';
-        var str4 = '">';
-        var str5 = '</div> </div> </div> </li> <li class="item-content"> <div class="item-inner"> <div class="row"> <a href="#" class="button button-raised col-33" value="1" onclick="showDeductResult(this);">RM1</a> <a href="#" class="button button-raised col-33" value="2" onclick="showDeductResult(this);">RM2</a> <a href="#" class="button button-raised col-33" value="5" onclick="showDeductResult(this);">RM5</a> </div> </div> </li> </ul> </div> <div class="content-block"><a href="#" class="button button-big" onclick="confirmTransaction(\'deduct\');">Confirm</a></div> </div> </div></div>';
-
-        firebase.database().ref('users/' + uid).once('value', function (data) {
-            var user = data.val();
-            var strPage = str1 + user.name + str2 + uid + str3 + user.balance + str4 + user.balance + str5;
-            mainView.loadContent(strPage);
-            myApp.hideIndicator();
-        }).catch(function (err) {
-            myApp.hideIndicator();
-            alert(err);
-        });
-    };
-
-    // Init QR Scanner
-    var done = function (err, status) {
-        if (err) {
-            alert(err._message);
-            return;
-        }
-        hideAll();
-        QRScanner.scan(scanned);
-        QRScanner.show();
-    };
-
-    onScan = true;
-    QRScanner.prepare(done);
+         firebase.database().ref('users/' + uid).once('value', function (data) {
+             var user = data.val();
+             var strPage = str1 + user.name + str2 + uid + str3 + user.balance + str4 + user.balance + str5;
+             mainView.loadContent(strPage);
+             myApp.hideIndicator();
+         }).catch(function (err) {
+             myApp.hideIndicator();
+             alert(err);
+         });
+     },
+     function (error) {
+         alert("Scanning failed: " + error);
+         mainView.router.loadPage('main.html');
+         $$('.page-on-left').remove();
+         mainView.history = ['index.html'];
+     }
+  );
 }
 
 function history() {
@@ -308,4 +335,8 @@ function history() {
         alert(err);
     });
     return;
+}
+
+function setting() {
+
 }
