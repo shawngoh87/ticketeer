@@ -16,7 +16,6 @@ DB.permission = {};
 /* Authentication */
 firebase.auth().onAuthStateChanged(function (user) {
     if (user) {
-        alert(user.uid);
         initDB(user.uid, function () {
             mainView.router.loadPage('main.html');
             setTimeout(() => {
@@ -44,7 +43,6 @@ function initDB(uid, callback) {
         }
         firebase.database().ref('admin/clearance/' + DB.permission.access + '/accessables/').once('value', function (data) {
             DB.permission.accessables = data.val();
-            alert(DB.permission.accessables.member.add);
             callback.call();
         }).catch(function (err) {
             alert(err);
@@ -138,8 +136,9 @@ function confirmTransaction(op) {
 
     var change = $$('.balance-var').attr('change');
     var amount = $$('.balance-var').attr('amount');
-    var uid = $$('.uid').text();
+    var user_uid = $$('.uid').text();
     var user_name = $$('.name').text();
+    var exec_uid = firebase.auth().currentUser.uid;
 
     if (amount === null) { // check for null
         alert('Please select an amount!');
@@ -147,19 +146,19 @@ function confirmTransaction(op) {
     }
     myApp.showIndicator();
     var timestamp = Math.floor(Date.now());
-    firebase.database().ref('users/' + uid).update({
+    firebase.database().ref('users/' + user_uid).update({
         "balance": change
     })
         .then(function () {
-            firebase.database().ref('users/' + uid + '/transactions/' + timestamp).update({
+            firebase.database().ref('users/' + user_uid + '/transactions/' + timestamp).update({
                 "timestamp": timestamp,
                 "amount": amount,
                 "operation": op
             })
             .then(function () {
-                firebase.database().ref('execs/' + 'execA' + '/transactions/' + timestamp).update({
+                firebase.database().ref('execs/' + exec_uid + '/transactions/' + timestamp).update({
                     "user_name": user_name,
-                    "user_uid": uid,
+                    "user_uid": user_uid,
                     "timestamp": timestamp,
                     "amount": amount,
                     "operation": op
@@ -200,7 +199,6 @@ function reload() {
 
     cordova.plugins.barcodeScanner.scan(
       function (result) {
-          alert(result.text);
           if (result.cancelled) {
               mainView.router.loadPage('main.html');
               $$('.page-on-left').remove();
@@ -293,7 +291,7 @@ function history() {
     var pageContentHeader = '<div data-page="history" class="page"> <div class="navbar"> <div class="navbar-inner"> <div class="left"><a href="#" class="back link icon-only"><i class="icon icon-back"></i></a></div> <div class="center">History</div> </div> </div> <div class="page-content vehicle-history-page">';
     var pageContentFooter = '</div></div>';
     var pageContent = '';
-    var uid = "execA";
+    var uid = firebase.auth().currentUser.uid;
     myApp.showIndicator();
     firebase.database().ref('execs/' + uid + '/transactions').once('value', function (data) {
 
