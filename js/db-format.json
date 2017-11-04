@@ -1,15 +1,22 @@
 {
 	"admin":{
-		"clearance_list":{
-			"VAR - CLEARANCE LEVEL":{ // string - Code for clearance level e.g. admin is A1 and moderator is B2 (use alphabets first)
-				"description": "string - description of access level e.g. moderator/admin/executives",
-				"accessables":{
-					"VAR - ACCESS ITEMS":{ // string - stuffs with access blocking e.g. general settings, adding/removing managers
+    "clearance_list": {
+      "VAR - CLEARANCE LEVEL": { // string - Code for clearance level e.g. admin is A1 and moderator is B2 (use alphabets first)
+        "description": "string - description of access level e.g. moderator/admin/executives",
+        "accessables": {
+          "VAR - ACCESS ITEMS": { // string - stuffs with access blocking e.g. general settings, adding/removing managers
 
-					}
-				}
-			}
-		}
+          }
+        }
+      }
+    },
+    "codes": {
+      "VAR - CODE": {
+        "issued_by": "string - UID of exec issuing the code",
+        "timestamp": "number - timestamp",
+        "used":  "boolean - whether the code is used"
+      }
+    }
 	},
 
 	"execs":{

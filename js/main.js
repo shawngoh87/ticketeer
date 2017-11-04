@@ -6,7 +6,6 @@ var myApp = new Framework7({
 });
 var $$ = Dom7;
 var mainView = myApp.addView('.view-main', {});
-var onScan = false;
 
 /* Global Namespace*/
 var DB = {};
@@ -16,6 +15,8 @@ DB.permission = {};
 /* Authentication */
 firebase.auth().onAuthStateChanged(function (user) {
     if (user) {
+        $$('.form-login').hide();
+        $$('.index-preloader').show();
         initDB(user.uid, function () {
             mainView.router.loadPage('main.html');
             setTimeout(() => {
@@ -79,22 +80,6 @@ function login() {
     }
 }
 
-$$(document).on('taphold', function () {
-    if (onScan) {
-        $("html").find('*').attr('style', '');
-        onScan = false;
-    }
-});
-
-function hideAll() {
-    // Hide all elements for preview
-    $("html").find('body').attr('style',
-        '   background: none transparent; \
-            display: none;\
-        '
-    );
-}
-
 function logout() {
     myApp.confirm('Log out?', function () {
         firebase.auth().signOut().then(function () {
@@ -108,6 +93,83 @@ function logout() {
     });
 }
 
+function register() {
+    var reg = {
+        name: $$('#txt-reg-name').val(),
+        password: $$('#txt-reg-password').val(),
+        password_confirm: $$('#txt-reg-password-confirm').val(),
+        email: $$('#txt-reg-email').val(),
+        phone: $$('#txt-reg-phone').val()
+    }
+
+    if (reg.name === "") { alert('Please enter your name.'); }
+    else if (reg.password === "") { alert('Please enter your password.'); }
+    else if (reg.password_confirm === "") { alert('Please confirm your password.'); }
+    else if (reg.email === "") { alert('Please enter your email.'); }
+    else if (reg.phone === "") { alert('Please enter your phone number.'); }
+    else if (reg.password !== reg.password_confirm) { alert('Passwords do not match.'); }
+    else {
+        myApp.prompt('Please collect your registration code from the administrator', 'Registration Code', function (regCode) {
+            firebase.database().ref('/admin/codes/' + regCode).once('value', function (data) {
+                var code = data.val();
+                if (code !== null) {
+                    if (!code.used) {
+                        firebase.auth().createUserWithEmailAndPassword(reg.email, reg.password).then(function (data) {
+                            var exec = firebase.auth().currentUser;
+
+                            //--------------------------------
+                            // Set user info to database
+                            //--------------------------------               
+                            firebase.database().ref('execs/' + exec.uid).set({
+                                email: reg.email,
+                                name: reg.name,
+                                phone: reg.phone,
+                                timestamp_reg: Math.floor(Date.now()),
+                                clearance: {
+                                    access: "X",
+                                    description: "Unassigned"
+                                }
+                            });
+
+                            //------------------------------
+                            // force sign out after sign up
+                            //------------------------------
+                            firebase.auth().signOut().then(function () {
+                                // Sign-out successful.                    
+                                mainView.router.back(); // Route later
+                            }).catch(function (error) {
+                                alert(error)
+                            });
+
+                        }).catch(function (error) {
+                            // Handle Sign Up Errors here.
+                            var errorCode = error.code;
+                            var errorMessage = error.message;
+                            if (errorCode === "auth/email-already-in-use")
+                                myApp.alert(errorMessage, 'Error');
+                            else if (errorCode === "auth/invalid-email")
+                                myApp.alert(errorMessage, 'Error');
+                            else if (errorCode === "auth/operation-not-allowed")
+                                myApp.alert(errorMessage, 'Error');
+                            else if (errorCode === "auth/weak-password")
+                                myApp.alert(errorMessage, 'Error');
+                        });
+                    }
+                    else {
+                        alert('Code already used.')
+                    }
+                }
+                else {
+                    alert('Registration code not found.');
+                }
+
+            });
+        })
+
+    }
+}
+
+/* Operations */
 function showDeductResult(item) {
     var balance = parseInt($$('.balance-var').attr('value'));
     var amount = parseInt($$(item).text().replace(/\D/g, ''));
@@ -207,7 +269,6 @@ function reload() {
           }
           var uid = result.text;
           //TODO: check for result.format and figure out what button triggers result.cancelled.
-          onScan = false;
           myApp.showIndicator();
 
           var str1 = '<div data-page="reload" class="page"> <div class="page-content login-screen-content"> <div class="navbar"> <div class="navbar-inner"> <div class="left"><a href="index.html" class="back link icon-only"><i class="icon icon-back"></i></a></div> <div class="center"></div> <div class="right"></div> </div> </div> <div class="login-screen-title"> Reload </div> <div class="content-block"> <div class="list-block inputs-list"> <ul> <li class="item-content"> <div class="item-inner"> <div class="row"> <div class="col-33 reload-details-key">Name</div> <div class="col-66 reload-details-value name">';
@@ -259,7 +320,6 @@ function deduct() {
          }
          var uid = result.text;
          //TODO: check for result.format and figure out what button triggers result.cancelled.
-         onScan = false;
          myApp.showIndicator();
 
          var str1 = '<div data-page="deduct" class="page"> <div class="page-content login-screen-content"> <div class="navbar"> <div class="navbar-inner"> <div class="left"><a href="index.html" class="back link icon-only"><i class="icon icon-back"></i></a></div> <div class="center"></div> <div class="right"></div> </div> </div> <div class="login-screen-title"> Deduct </div> <div class="content-block"> <div class="list-block inputs-list"> <ul> <li class="item-content"> <div class="item-inner"> <div class="row"> <div class="col-33 reload-details-key">Name</div> <div class="col-66 reload-details-value name">';
@@ -287,6 +347,7 @@ function deduct() {
   );
 }
 
+/* History */
 function history() {
     var pageContentHeader = '<div data-page="history" class="page"> <div class="navbar"> <div class="navbar-inner"> <div class="left"><a href="#" class="back link icon-only"><i class="icon icon-back"></i></a></div> <div class="center">History</div> </div> </div> <div class="page-content vehicle-history-page">';
     var pageContentFooter = '</div></div>';
@@ -335,6 +396,93 @@ function history() {
     return;
 }
 
-function setting() {
-
+/* Management */
+function manageView() {
+    myApp.showIndicator();
+    var pageHeader = '<div class="page" data-page="manage-view"><div class="navbar"><div class="navbar-inner"><div class="left"><a class="back link icon-only" href="index.html"><i class="icon icon-back"></i></a></div><div class="center">View Management</div></div></div><div class="page-content">';
+    var pageFooter = '</div></div>';
+    var pageContent = '';
+    firebase.database().ref('admin/clearance/').once('value', function (data) {
+        /*  Sort access level, load the title blocks to DOM.   
+            Then append each execs into the blocks. 
+            FIXIT: Database design is flawed, one function should only retrieve once.*/
+        var clearances = data.val();
+        var accessList = [];
+        for (var accessId in clearances){
+            accessList.push(accessId);
+        }
+        accessList.sort(sortAlphaNum);
+        accessList.forEach(function (val, _, _) {
+            pageContent += '<div class="access-block" style="display:none"><div class="content-block-title" >' + clearances[val].description + '</div>';
+            pageContent += '<div class="list-block""><ul class="' + val + '-list"></ul></div></div>';
+        });
+        var strPage = pageHeader + pageContent + pageFooter;
+        mainView.loadContent(strPage); // Load to DOM
+        firebase.database().ref('execs/').once('value', function (data) {
+            var execs = data.val();
+            for (var exec_uid in execs) {
+                var exec = execs[exec_uid];
+                var accessClass = '.' + exec.clearance.access + '-list';
+                var str1 = '<li><a href="#" class="item-link item-content"> <div class="item-inner"> <div class="item-title">';
+                var str2 = '</div> </div></a></li>';
+                $$(accessClass).append(str1 + exec.name + str2);
+                $$(accessClass).closest('.access-block').show();
+            }
+            myApp.hideIndicator();
+        });
+    });
 }
+
+function manageAccessSettings() {
+    myApp.showIndicator();
+    var pageHeader = '<div class="page" data-page="manage-access-settings"><div class="navbar"><div class="navbar-inner"><div class="left"><a class="back link icon-only" href="index.html"><i class="icon icon-back"></i></a></div><div class="center">Access Settings</div></div></div><div class="page-content">';
+    var pageFooter = '</div></div>';
+    var pageContent = '';
+    firebase.database().ref('admin/access/').once('value', function (data) {
+        var settings = data.val();
+        for (var settingKey in settings) {
+            var setting = settings[settingKey];
+            // add title here
+            pageContent += '<div class="content-block-title">' + settingKey.toUpperCase() + '</div><div class="list-block accordion-list"><ul>';
+            for (var subsettingKey in setting) {
+                var subsetting = setting[subsettingKey];
+                pageContent += '<li class="accordion-item"><a class="item-link item-content" href="#"><div class="item-inner"><div class="item-title">';
+                pageContent += subsetting.description;
+                pageContent += '</div></div></a><div class="accordion-item-content"><div class="list-block"><ul>';
+                // add content here (checkboxes)
+                for (var role in subsetting.accessed_by) {
+                    pageContent += '<li> <label class="label-checkbox item-content"> <input type="checkbox" ';
+                    //console.log(role + ' is ' + subsetting.accessed_by[role]);
+                    if (subsetting.accessed_by[role]) { pageContent += 'checked '; }
+                    //else { pageContent += 'f' }
+                    //else alert('error');
+                    pageContent += 'name="' + subsettingKey + '" value="' + role + '">';
+                    pageContent += '<div class="item-media"><i class="icon icon-form-checkbox"></i></div> <div class="item-inner"> <div class="item-title">';
+                    pageContent += role + '</div> </div> </label> </li>';
+                }
+                pageContent += '</ul></div></div>';
+            }
+            pageContent += '</ul></div>';
+        }
+        var strPage = pageHeader + pageContent + pageFooter;
+        mainView.loadContent(strPage); // Load to DOM
+        myApp.hideIndicator();
+    });
+}
+
+/* Misc. */
+function sortAlphaNum(a,b) {
+    // Thanks @epascarello from StackOverflow
+    var reA = /[^a-zA-Z]/g;
+    var reN = /[^0-9]/g;
+    var aA = a.replace(reA, "");
+    var bA = b.replace(reA, "");
+    if(aA === bA) {
+        var aN = parseInt(a.replace(reN, ""), 10);
+        var bN = parseInt(b.replace(reN, ""), 10);
+        return aN === bN ? 0 : aN > bN ? 1 : -1;
+    } else {
+        return aA > bA ? 1 : -1;
+    }
+}
+
