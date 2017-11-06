@@ -347,6 +347,57 @@ function deduct() {
   );
 }
 
+/* Add user */
+function addUser() {
+    cordova.plugins.barcodeScanner.scan(
+      function (result) {
+          if (result.cancelled) {
+              mainView.router.loadPage('main.html');
+              $$('.page-on-left').remove();
+              mainView.history = ['index.html'];
+              return;
+          }
+          var uid = result.text;
+          //TODO: check for result.format and figure out what button triggers result.cancelled.
+          myApp.showIndicator();
+
+          var str1 = '<div data-page="reload" class="page"> <div class="page-content login-screen-content"> <div class="navbar"> <div class="navbar-inner"> <div class="left"><a href="index.html" class="back link icon-only"><i class="icon icon-back"></i></a></div> <div class="center"></div> <div class="right"></div> </div> </div> <div class="login-screen-title"> Add User </div> <div class="content-block"> <div class="list-block inputs-list"> <ul> <li class="item-content"> <div class="item-inner"> <div class="row"> <div class="col-33 reload-details-key">Name</div> <div class="col-66 reload-details-value name">';
+          var str2 = '</div> </div> </div> </li> <li class="item-content"> <div class="item-inner"> <div class="row"> <div class="col-33 reload-details-key">UID</div> <div class="col-66 reload-details-value uid">';
+          var str3 = '</div> </div> </div> </li> <li class="item-content"> <div class="item-inner"> <div class="row"> <div class="col-33 reload-details-key">Balance</div> <div class="col-66 reload-details-value balance-var" value="';
+          var str4 = '">';
+          var str5 = '</div> </div> </div> </li></ul> </div> <div class="content-block"><a href="#" class="button button-big" onclick="confirmAddUser(\'' + uid + '\');">Confirm</a></div> </div> </div></div>';
+
+          var nameInput = '<input type="text" class="txt-adduser-name"/>';
+
+          var strPage = str1 + nameInput + str2 + uid + str3 + 0 + str4 + 0 + str5;
+          mainView.loadContent(strPage);
+          myApp.hideIndicator();
+      },
+      function (error) {
+          alert("Scanning failed: " + error);
+          mainView.router.loadPage('main.html');
+          $$('.page-on-left').remove();
+          mainView.history = ['index.html'];
+      }
+   );
+}
+
+function confirmAddUser(uid) {
+    var name = $$('body').find('.txt-adduser-name').val();
+    myApp.showIndicator();
+    ret = {
+        name: name,
+        balance: 0,
+        timestamp_reg: Math.floor(Date.now())
+    }
+    firebase.database().ref('users/' + uid).update(ret).then(function () {
+        myApp.hideIndicator();
+        mainView.router.loadPage('main.html');
+        $$('.page-on-left').remove();
+        mainView.history = ['index.html'];
+    });
+}
+
 /* History */
 function history() {
     var pageContentHeader = '<div data-page="history" class="page"> <div class="navbar"> <div class="navbar-inner"> <div class="left"><a href="#" class="back link icon-only"><i class="icon icon-back"></i></a></div> <div class="center">History</div> </div> </div> <div class="page-content vehicle-history-page">';
@@ -404,7 +455,7 @@ function manageView() {
     var pageContent = '';
     firebase.database().ref('admin/clearance/').once('value', function (data) {
         /*  Sort access level, load the title blocks to DOM.   
-            Then append each execs into the blocks. 
+            Then append each execs into the list blocks. 
             FIXIT: Database design is flawed, one function should only retrieve once.*/
         var clearances = data.val();
         var accessList = [];
@@ -423,7 +474,7 @@ function manageView() {
             for (var exec_uid in execs) {
                 var exec = execs[exec_uid];
                 var accessClass = '.' + exec.clearance.access + '-list';
-                var str1 = '<li><a href="#" class="item-link item-content"> <div class="item-inner"> <div class="item-title">';
+                var str1 = '<li><a href="#" class="item-link item-content" onclick="manageViewSpecificExec(\'' + exec_uid + '\')"> <div class="item-inner"> <div class="item-title">';
                 var str2 = '</div> </div></a></li>';
                 $$(accessClass).append(str1 + exec.name + str2);
                 $$(accessClass).closest('.access-block').show();
@@ -431,6 +482,23 @@ function manageView() {
             myApp.hideIndicator();
         });
     });
+}
+
+function manageViewSpecificExec(uid) {
+    /*  FIXIT: This function should probably combine with manageView()
+        so we dont have to read DB twice */
+    myApp.showIndicator();
+    firebase.database().ref('execs/' + uid).once('value', function (data) {
+        var exec = data.val();
+        var pageHeader = '<div class="page" data-page="manage-view-specific"><div class="navbar"><div class="navbar-inner"><div class="left"><a class="back link icon-only" href="index.html"><i class="icon icon-back"></i></a></div><div class="center">' + exec.name + '</div></div></div><div class="page-content">';
+        var pageFooter = '</div></div>';
+        var pageContent = '';
+
+        var strPage = pageHeader + pageContent + pageFooter;
+        mainView.loadContent(strPage);
+        myApp.hideIndicator();
+    });
+
 }
 
 function manageAccessSettings() {
