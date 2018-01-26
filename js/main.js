@@ -572,15 +572,15 @@ function addUser() {
 
           var str1 = '<div data-page="reload" class="page"> <div class="page-content login-screen-content"> <div class="navbar"> <div class="navbar-inner"> <div class="left"><a href="index.html" class="back link icon-only"><i class="icon icon-back"></i></a></div> <div class="center"></div> <div class="right"></div> </div> </div> <div class="login-screen-title"> Add User </div> <div class="content-block"> <div class="list-block inputs-list"> <ul> <li class="item-content"> <div class="item-inner"> <div class="row"> <div class="col-33 reload-details-key">Name</div> <div class="col-66 reload-details-value name">';
           var str2 = '</div> </div> </div> </li> <li class="item-content"> <div class="item-inner"> <div class="row"> <div class="col-33 reload-details-key">UID</div> <div class="col-66 reload-details-value uid">';
-          var str3 = '</div> </div> </div> </li> <li class="item-content"> <div class="item-inner"> <div class="row"> <div class="col-33 reload-details-key">Balance</div> <div class="col-66 reload-details-value balance-var" value="';
+          var str3 = '</div> </div> </div> </li> ';
           var str4 = '">';
-          var str5 = '</div> </div> </div> </li></ul> </div> <div class="content-block"><a href="#" class="button button-big" onclick="confirmAddUser(\'' + uid + '\');">Confirm</a></div> </div> </div></div>';
+          var str5 = '</ul> </div> <div class="content-block"><a href="#" class="button button-big" onclick="confirmAddUser(\'' + uid + '\');">Confirm</a></div> </div> </div></div>';
 
           var nameInput = '<input type="text" style="background-color: #dadfe8; padding: 0px; margin: 0px; height: auto;" class="txt-adduser-name"/>';
 
           firebase.database().ref('users/' + uid).once('value', function (data) {
               if (data.val() === null) {
-                  var strPage = str1 + nameInput + str2 + uid + str3 + 0 + str4 + 0 + str5;
+                  var strPage = str1 + nameInput + str2 + uid + str3 + str5;
                   mainView.loadContent(strPage);
                   myApp.hideIndicator();
               }
@@ -728,41 +728,133 @@ function manageView() {
 
 function manageViewSpecificExec(uid) {
 
-    if (DB.permission.access !== 'A1') {
+    if (DB.permission.access !== 'A1' && DB.permission.access !== 'B1' ) {
         alert('Access denied.\nPlease contact an Admin.');
         return;
     }
 
+    var itsAnAdminLOL = false;
     myApp.showIndicator();
-    var clearanceList = {};
-    firebase.database().ref('admin/clearance').once('value', function (data) {
-        clearanceList = data.val();
-        console.log(clearanceList);
-        myApp.prompt('', 'Change role', function (data) {
+    firebase.database().ref('execs/' + uid + '/clearance').once('value', function (data) {
+        if (data.val().access === 'A1') {
+            itsAnAdminLOL = true;
+        }
+    })
+    .then(function () {
+        myApp.hideIndicator();
+        if (itsAnAdminLOL) {
+            alert('You cannot change the role of an Admin');
+            return;
+        }
 
-            myApp.hideIndicator();
-            var found = 0;
-            for (var clearance in clearanceList) {
-                console.log(clearance);
-                if (data === clearance) {
-                    found = 1;
-                    break;
+        myApp.modal({
+            title: 'Change Role',
+            text: '',
+            verticalButtons: true,
+            buttons: [
+                {
+                    text: 'Moderator',
+                    onClick: function () {
+                        changeRole('Moderator');
+                    }
+                },
+                {
+                    text: 'Executive',
+                    onClick: function () {
+                        changeRole('Executive');
+                    }
+                },
+                {
+                    text: 'Reload-only',
+                    onClick: function () {
+                        changeRole('Reload-only');
+                    }
+                },
+                {
+                    text: 'Deduct-only',
+                    onClick: function () {
+                        changeRole('Deduct-only');
+                    }
+                },
+                {
+                    text: 'Unassigned',
+                    onClick: function () {
+                        changeRole('Unassigned');
+                    }
+                },
+                {
+                    text: 'Back',
+                    bold: true,
+                    onClick: function () {
+                    }
                 }
-            }
-
-            if (found) {
-                firebase.database().ref('execs/' + uid + '/clearance').update({
-                    access: data,
-                    description: clearanceList[data].description
-                })
-                .then(function () {
-                    alert('Successfully updated!');
-                });
-            }
-        }, function () {
-            myApp.hideIndicator();
-        });
+            ]
+        })
     });
+
+    
+
+    function changeRole(role) {
+        var roleMap = {
+            'Admin': 'A1',
+            'Moderator': 'B1',
+            'Executive': 'C1',
+            'Reload-only': 'C2',
+            'Deduct-only': 'C3',
+            'Unassigned': 'X'
+        }
+
+        var roleAbv = roleMap[role];
+        myApp.showIndicator();
+        firebase.database().ref('execs/' + uid + '/clearance').update({
+            access: roleAbv,
+            description: role
+        })
+            .then(function () {
+                alert('Successfully updated!');
+                mainView.router.loadPage('main.html');
+                $$('.page-on-left').remove();
+                mainView.history = ['index.html'];
+                myApp.hideIndicator();
+            })
+            .catch(function (err) {
+                mainView.router.loadPage('main.html');
+                $$('.page-on-left').remove();
+                mainView.history = ['index.html'];
+                myApp.hideIndicator();
+                alert(err);
+            });
+    }
+    //var clearanceList = {};
+    //firebase.database().ref('admin/clearance').once('value', function (data) {
+    //    clearanceList = data.val();
+    //    console.log(clearanceList);
+        
+    //    myApp.prompt('', 'Change role', function (data) {
+
+    //        myApp.hideIndicator();
+    //        var found = 0;
+    //        for (var clearance in clearanceList) {
+    //            console.log(clearance);
+    //            if (data === clearance) {
+    //                found = 1;
+    //                break;
+    //            }
+    //        }
+
+    //        if (found) {
+    //            firebase.database().ref('execs/' + uid + '/clearance').update({
+    //                access: data,
+    //                description: clearanceList[data].description
+    //            })
+    //            .then(function () {
+    //                alert('Successfully updated!');
+    //            });
+    //        }
+    //    }, function () {
+    //        myApp.hideIndicator();
+    //    });
+    //});
     
 }
 
@@ -839,15 +931,32 @@ function sortAlphaNum(a,b) {
 /* Page Inits */
 myApp.onPageInit('main', function (page) {
     /* Enable/Disable operation buttons based on role assigned */
+    $$('.menu-reload').css('pointer-events', 'none');
+    $$('.menu-deduct').css('pointer-events', 'none');
+    //$$('.menu-info').css('pointer-events', 'none');
+    $$('.menu-claim').css('pointer-events', 'none');
+    $$('.menu-add-points').css('pointer-events', 'none');
+    $$('.menu-add-user').css('pointer-events', 'none');
+    //$$('.menu-history').css('pointer-events', 'none');
+    $$('.menu-manage').css('pointer-events', 'none');
     try{
         if (DB.permission.accessables.operation.reload) {
-            $$('.menu-reload').removeAttr('disabled');
+            $$('.menu-reload').css('pointer-events', 'auto');
         }
         if (DB.permission.accessables.operation.deduct) {
-            $$('.menu-deduct').removeAttr('disabled');
+            $$('.menu-deduct').css('pointer-events', 'auto');
         }
         if (DB.permission.accessables.member.add) {
-            $$('.menu-add-user').removeAttr('disabled');
+            $$('.menu-add-user').css('pointer-events', 'auto');
+        }
+        if (DB.permission.accessables.member.change) {
+            $$('.menu-manage').css('pointer-events', 'auto');
+        }
+        if (DB.permission.accessables.operation.claim) {
+            $$('.menu-claim').css('pointer-events', 'auto');
+        }
+        if (DB.permission.accessables.operation.points) {
+            $$('.menu-add-points').css('pointer-events', 'auto');
         }
     }
     catch (err) {

@@ -50,7 +50,7 @@
                         <div class="item-inner">
                             <div class="row">
                                 <!--<a class="button button-raised col-33" href="#" onclick="showReloadResult(this);">RM1</a> <a class="button button-raised col-33" href="#" onclick="showReloadResult(this);">RM2</a> <a class="button button-raised col-33" href="#" onclick="showReloadResult(this);">RM5</a>-->
-                                <input type="number" class="amount" placeholder="Amount"/>
+                                <input type="number" pattern=" 0+\.[0-9]*[1-9][0-9]*$" onkeypress="return event.charCode >= 48 && event.charCode <= 57" class="amount" placeholder="Amount"/>
                             </div>
                         </div>
                     </li>
