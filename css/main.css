@@ -1,1 +1,17 @@
-﻿
+﻿.front-message {
+    z-index: 100;
+    border-style: solid;
+    border-color: gray;
+    border-radius: 8px;
+    background-color: gray;
+    color: white;
+    position: absolute;
+    margin: auto;
+    padding: 5px;
+    top: 90%;
+    right:28%;
+}
+
+txt-adduser-name {
+    background-color: lightslategray;
+}

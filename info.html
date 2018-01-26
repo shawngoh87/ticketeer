@@ -1,5 +1,5 @@
 ﻿
-<div class="page" data-page="deduct">
+<div class="page" data-page="info">
     <div class="page-content login-screen-content">
         <div class="navbar">
             <div class="navbar-inner">
@@ -11,7 +11,7 @@
             </div>
         </div>
         <div class="login-screen-title">
-            Deduct
+            Info
         </div>
         <div class="content-block">
             <div class="list-block inputs-list">
@@ -49,15 +49,27 @@
                     <li class="item-content">
                         <div class="item-inner">
                             <div class="row">
-                                <!--<a class="button button-raised col-33" href="#" onclick="showReloadResult(this);">RM1</a> <a class="button button-raised col-33" href="#" onclick="showReloadResult(this);">RM2</a> <a class="button button-raised col-33" href="#" onclick="showReloadResult(this);">RM5</a>-->
-                                <input type="number" class="amount" placeholder="Amount" />
+                                <div class="col-33 reload-details-key">
+                                    Points
+                                </div>
+                                <div class="col-66 reload-details-value points"></div>
+                            </div>
+                        </div>
+                    </li>
+                    <li class="item-content">
+                        <div class="item-inner">
+                            <div class="row">
+                                <div class="col-33 reload-details-key">
+                                    Date Created
+                                </div>
+                                <div class="col-66 reload-details-value date-created"></div>
                             </div>
                         </div>
                     </li>
                 </ul>
             </div>
             <div class="content-block">
-                <a class="button button-big confirm-transaction" href="#">Confirm</a>
+                <a class="button button-big" href="main.html">Back</a>
             </div>
         </div>
     </div>

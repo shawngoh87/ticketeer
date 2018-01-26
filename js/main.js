@@ -11,12 +11,35 @@ var mainView = myApp.addView('.view-main', {});
 var DB = {};
 DB.exec = null;
 DB.permission = {};
+var isExitReady = 0;
+
+/* Disable default hardware actions */
+document.addEventListener("backbutton", onBackKeyDown, false);
+function onBackKeyDown(e) {
+    e.preventDefault();
+    if (mainView.activePage.name !== 'main' && mainView.activePage.name !== 'index') {
+        mainView.back();
+    }
+    else if (isExitReady) {
+        navigator.app.exitApp();
+    }
+    else if (!isExitReady) {
+        $$('.popover-notification').text('Press back again to exit.');
+        $('.popover-notification').fadeIn();
+        isExitReady = 1;
+        setTimeout(function () {
+            isExitReady = 0;
+            $('.popover-notification').fadeOut();
+        }, 3000);
+    }
+}
 
 /* Authentication */
 firebase.auth().onAuthStateChanged(function (user) {
     if (user) {
         $$('.form-login').hide();
         $$('.index-preloader').show();
+        console.log(user.uid);
         initDB(user.uid, function () {
             mainView.router.loadPage('main.html');
             setTimeout(() => {
@@ -36,6 +59,12 @@ function initDB(uid, callback) {
         var exec = data.val();
         if (exec === null) {
             alert('Unregistered executive.');
+            firebase.auth().signOut().then(function () {
+                $$('.index-preloader').hide();
+                $$('.form-login').show();
+            }).catch(function (err) {
+                alert(err);
+            });
             return;
         }
         DB.permission = {
@@ -47,7 +76,7 @@ function initDB(uid, callback) {
             callback.call();
         }).catch(function (err) {
             alert(err);
-        });;
+        });
     }).catch(function (err) {
         alert(err);
     });;
@@ -110,6 +139,11 @@ function register() {
     else if (reg.password !== reg.password_confirm) { alert('Passwords do not match.'); }
     else {
         myApp.prompt('Please collect your registration code from the administrator', 'Registration Code', function (regCode) {
+            if (!regCode) {
+                alert('Code is empty.');
+                return;
+            }
+            myApp.showIndicator();
             firebase.database().ref('/admin/codes/' + regCode).once('value', function (data) {
                 var code = data.val();
                 if (code !== null) {
@@ -129,14 +163,18 @@ function register() {
                                     access: "X",
                                     description: "Unassigned"
                                 }
+                            }).catch(function (error) {
+                                console.log(error);
                             });
 
                             //------------------------------
                             // force sign out after sign up
                             //------------------------------
                             firebase.auth().signOut().then(function () {
-                                // Sign-out successful.                    
-                                mainView.router.back(); // Route later
+                                // Sign-out successful.
+                                location = "index.html";
+                                alert('Successful registered.\n You may login now.')
+                                myApp.hideIndicator();
                             }).catch(function (error) {
                                 alert(error)
                             });
@@ -153,14 +191,18 @@ function register() {
                                 myApp.alert(errorMessage, 'Error');
                             else if (errorCode === "auth/weak-password")
                                 myApp.alert(errorMessage, 'Error');
+
+                            myApp.hideIndicator();
                         });
                     }
                     else {
-                        alert('Code already used.')
+                        alert('Code already used.');
+                        myApp.hideIndicator();
                     }
                 }
                 else {
                     alert('Registration code not found.');
+                    myApp.hideIndicator();
                 }
 
             });
@@ -194,7 +236,7 @@ function showReloadResult(item) {
     $$('.balance-var').attr('amount', amount);
 }
 
-function confirmTransaction(op) {
+function confirmTransactionSTUB(op) {
 
     var change = $$('.balance-var').attr('change');
     var amount = $$('.balance-var').attr('amount');
@@ -257,6 +299,139 @@ function confirmTransaction(op) {
 
 }
 
+function info() {
+
+    cordova.plugins.barcodeScanner.scan(
+        function (result) {
+            if (result.cancelled) {
+                mainView.router.loadPage('main.html');
+                return;
+            }
+            var uid = result.text;
+            //TODO: check for result.format and figure out what button triggers result.cancelled.
+            myApp.showIndicator();
+
+            firebase.database().ref('users/' + uid).once('value', function (data) {
+                if (data.val() !== null) {
+                    var user = data.val();
+                    user.uid = uid;
+                    mainView.router.load({
+                        url: "info.html",
+                        query: user
+                    });
+
+                    myApp.hideIndicator();
+                }
+                else {
+                    alert('User does not exist.');
+                    mainView.router.loadPage('main.html');
+                    myApp.hideIndicator();
+                }
+            }).catch(function (err) {
+                myApp.hideIndicator();
+                alert(err);
+            });
+        },
+        function (error) {
+            alert("Scanning failed: " + error);
+            mainView.router.loadPage('main.html');
+            $$('.page-on-left').remove();
+            mainView.history = ['index.html'];
+        }
+    );
+}
+
+function addPoints(points) {
+
+    cordova.plugins.barcodeScanner.scan(
+        function (result) {
+            if (result.cancelled) {
+                mainView.router.loadPage('main.html');
+                return;
+            }
+            var uid = result.text;
+            //TODO: check for result.format and figure out what button triggers result.cancelled.
+            myApp.showIndicator();
+
+            firebase.database().ref('users/' + uid).once('value', function (data) {
+                if (data.val() !== null) {
+                    var user = data.val();
+                    user.uid = uid;
+                    firebase.database().ref('users/' + uid).update({
+                        points: user.points + points
+                    }).then(function () {
+                        myApp.hideIndicator(); 
+                    }).catch(function (err) {
+                        myApp.hideIndicator();
+                        alert(err);
+                    })
+
+                    myApp.hideIndicator();
+                }
+                else {
+                    alert('User does not exist.');
+                    mainView.router.loadPage('main.html');
+                    myApp.hideIndicator();
+                }
+            }, function (err) {
+                myApp.hideIndicator();
+                alert(err);
+            }).catch(function (err) {
+                myApp.hideIndicator();
+                alert(err);
+            });
+        },
+        function (error) {
+            alert("Scanning failed: " + error);
+            mainView.router.loadPage('main.html');
+            //$$('.page-on-left').remove();
+            //mainView.history = ['index.html'];
+        }
+    );
+}
+
+function claim() {
+
+    cordova.plugins.barcodeScanner.scan(
+        function (result) {
+            if (result.cancelled) {
+                mainView.router.loadPage('main.html');
+                return;
+            }
+            var uid = result.text;
+            //TODO: check for result.format and figure out what button triggers result.cancelled.
+            myApp.showIndicator();
+
+            firebase.database().ref('users/' + uid).once('value', function (data) {
+                if (data.val() !== null) {
+                    var user = data.val();
+                    user.uid = uid;
+                    mainView.router.load({
+                        url: "claim.html",
+                        query: user
+                    });
+
+                    myApp.hideIndicator();
+                }
+                else {
+                    alert('User does not exist.');
+                    mainView.router.loadPage('main.html');
+                    myApp.hideIndicator();
+                }
+            }).catch(function (err) {
+                myApp.hideIndicator();
+                alert(err);
+            });
+        },
+        function (error) {
+            alert("Scanning failed: " + error);
+            mainView.router.loadPage('main.html');
+            $$('.page-on-left').remove();
+            mainView.history = ['index.html'];
+        }
+    );
+}
+
 function reload() {
 
     cordova.plugins.barcodeScanner.scan(
@@ -278,18 +453,35 @@ function reload() {
           var str5 = '</div> </div> </div> </li> <li class="item-content"> <div class="item-inner"> <div class="row"> <a href="#" class="button button-raised col-33" value="1" onclick="showReloadResult(this);">RM1</a> <a href="#" class="button button-raised col-33" value="2" onclick="showReloadResult(this);">RM2</a> <a href="#" class="button button-raised col-33" value="5" onclick="showReloadResult(this);">RM5</a> </div> </div> </li> </ul> </div> <div class="content-block"><a href="#" class="button button-big" onclick="confirmTransaction(\'reload\');">Confirm</a></div> </div> </div></div>';
 
           firebase.database().ref('users/' + uid).once('value', function (data) {
+              //if (data.val() !== null) {
+              //    var user = data.val();
+              //    var strPage = str1 + user.name + str2 + uid + str3 + user.balance + str4 + user.balance + str5;
+              //    mainView.loadContent(strPage);
+              //    myApp.hideIndicator();
+              //}
+              //else {
+              //    alert('User does not exist.');
+              //    mainView.router.loadPage('main.html');
+              //    $$('.page-on-left').remove();
+              //    mainView.history = ['index.html'];
+              //    myApp.hideIndicator();
+              //}
               if (data.val() !== null) {
                   var user = data.val();
-                  var strPage = str1 + user.name + str2 + uid + str3 + user.balance + str4 + user.balance + str5;
-                  mainView.loadContent(strPage);
+                  user.uid = uid;
+                  mainView.router.load({
+                      url: "reload.html",
+                      query: user
+                  });
+
                   myApp.hideIndicator();
               }
               else {
-                  alert('User does not exist.');
-                  mainView.router.loadPage('main.html');
-                  $$('.page-on-left').remove();
-                  mainView.history = ['index.html'];
-                  myApp.hideIndicator();
+                alert('User does not exist.');
+                mainView.router.loadPage('main.html');
+                //$$('.page-on-left').remove();
+                //mainView.history = ['index.html'];
+                myApp.hideIndicator();
               }
           }, function (err) {
               myApp.hideIndicator();
@@ -302,8 +494,8 @@ function reload() {
       function (error) {
           alert("Scanning failed: " + error);
           mainView.router.loadPage('main.html');
-          $$('.page-on-left').remove();
-          mainView.history = ['index.html'];
+          //$$('.page-on-left').remove();
+          //mainView.history = ['index.html'];
       }
    );
 }
@@ -329,10 +521,27 @@ function deduct() {
          var str5 = '</div> </div> </div> </li> <li class="item-content"> <div class="item-inner"> <div class="row"> <a href="#" class="button button-raised col-33" value="1" onclick="showDeductResult(this);">RM1</a> <a href="#" class="button button-raised col-33" value="2" onclick="showDeductResult(this);">RM2</a> <a href="#" class="button button-raised col-33" value="5" onclick="showDeductResult(this);">RM5</a> </div> </div> </li> </ul> </div> <div class="content-block"><a href="#" class="button button-big" onclick="confirmTransaction(\'deduct\');">Confirm</a></div> </div> </div></div>';
 
          firebase.database().ref('users/' + uid).once('value', function (data) {
-             var user = data.val();
-             var strPage = str1 + user.name + str2 + uid + str3 + user.balance + str4 + user.balance + str5;
-             mainView.loadContent(strPage);
-             myApp.hideIndicator();
+             //var user = data.val();
+             //var strPage = str1 + user.name + str2 + uid + str3 + user.balance + str4 + user.balance + str5;
+             //mainView.loadContent(strPage);
+             //myApp.hideIndicator();
+             if (data.val() !== null) {
+                 var user = data.val();
+                 user.uid = uid;
+                 mainView.router.load({
+                     url: "deduct.html",
+                     query: user
+                 });
+
+                 myApp.hideIndicator();
+             }
+             else {
+                 alert('User does not exist.');
+                 mainView.router.loadPage('main.html');
+                 //$$('.page-on-left').remove();
+                 //mainView.history = ['index.html'];
+                 myApp.hideIndicator();
+             }
          }).catch(function (err) {
              myApp.hideIndicator();
              alert(err);
@@ -367,11 +576,28 @@ function addUser() {
           var str4 = '">';
           var str5 = '</div> </div> </div> </li></ul> </div> <div class="content-block"><a href="#" class="button button-big" onclick="confirmAddUser(\'' + uid + '\');">Confirm</a></div> </div> </div></div>';
 
-          var nameInput = '<input type="text" class="txt-adduser-name"/>';
+          var nameInput = '<input type="text" style="background-color: #dadfe8; padding: 0px; margin: 0px; height: auto;" class="txt-adduser-name"/>';
 
-          var strPage = str1 + nameInput + str2 + uid + str3 + 0 + str4 + 0 + str5;
-          mainView.loadContent(strPage);
-          myApp.hideIndicator();
+          firebase.database().ref('users/' + uid).once('value', function (data) {
+              if (data.val() === null) {
+                  var strPage = str1 + nameInput + str2 + uid + str3 + 0 + str4 + 0 + str5;
+                  mainView.loadContent(strPage);
+                  myApp.hideIndicator();
+              }
+              else {
+                  alert('User already exist.');
+                  mainView.router.loadPage('main.html');
+                  //$$('.page-on-left').remove();
+                  //mainView.history = ['index.html'];
+                  myApp.hideIndicator();
+              }
+          }, function (err) {
+              myApp.hideIndicator();
+              alert(err);
+          }).catch(function (err) {
+              myApp.hideIndicator();
+              alert(err);
+          });
       },
       function (error) {
           alert("Scanning failed: " + error);
@@ -384,10 +610,16 @@ function addUser() {
 
 function confirmAddUser(uid) {
     var name = $$('body').find('.txt-adduser-name').val();
+
+    if (!name) {
+        alert('Please insert name.');
+        return;
+    }
     myApp.showIndicator();
     ret = {
         name: name,
         balance: 0,
+        points: 0,
         timestamp_reg: Math.floor(Date.now())
     }
     firebase.database().ref('users/' + uid).update(ret).then(function () {
@@ -408,10 +640,19 @@ function history() {
     firebase.database().ref('execs/' + uid + '/transactions').once('value', function (data) {
 
         var history = data.val();
+        var arr = [];
+        /* Stores in an array and reverse the array later */
         for (var eachHistory in history) {
 
+            arr.push(eachHistory);
+        }
+
+        // FIXIT: Object does not have guaranteed reversal
+        for (var i = arr.length - 1; i >= 0; i--) {
+
             var color = '';
-            var historyInstance = history[eachHistory];
+            console.log(history[arr[i]]);
+            var historyInstance = history[arr[i]];
             switch (historyInstance.operation) {
                 case 'reload':
                     color = 'bg-lightgreen'; // Default colors of F7
@@ -439,6 +680,7 @@ function history() {
 
             pageContent += (str1 + name + str3 + amt + str4);
         }
+
         mainView.loadContent(pageContentHeader + pageContent + pageContentFooter);
         myApp.hideIndicator();
     }).catch(function (err) {
@@ -485,6 +727,46 @@ function manageView() {
 }
 
 function manageViewSpecificExec(uid) {
+
+    if (DB.permission.access !== 'A1') {
+        alert('Access denied.\nPlease contact an Admin.');
+        return;
+    }
+
+    myApp.showIndicator();
+    var clearanceList = {};
+    firebase.database().ref('admin/clearance').once('value', function (data) {
+        clearanceList = data.val();
+        console.log(clearanceList);
+        myApp.prompt('', 'Change role', function (data) {
+
+            myApp.hideIndicator();
+            var found = 0;
+            for (var clearance in clearanceList) {
+                console.log(clearance);
+                if (data === clearance) {
+                    found = 1;
+                    break;
+                }
+            }
+
+            if (found) {
+                firebase.database().ref('execs/' + uid + '/clearance').update({
+                    access: data,
+                    description: clearanceList[data].description
+                })
+                .then(function () {
+                    alert('Successfully updated!');
+                });
+            }
+        }, function () {
+            myApp.hideIndicator();
+        });
+    });
+    
+}
+
+function manageViewSpecificExecSTUB(uid) {
     /*  FIXIT: This function should probably combine with manageView()
         so we dont have to read DB twice */
     myApp.showIndicator();
@@ -554,3 +836,217 @@ function sortAlphaNum(a,b) {
     }
 }
 
+/* Page Inits */
+myApp.onPageInit('main', function (page) {
+    /* Enable/Disable operation buttons based on role assigned */
+    try{
+        if (DB.permission.accessables.operation.reload) {
+            $$('.menu-reload').removeAttr('disabled');
+        }
+        if (DB.permission.accessables.operation.deduct) {
+            $$('.menu-deduct').removeAttr('disabled');
+        }
+        if (DB.permission.accessables.member.add) {
+            $$('.menu-add-user').removeAttr('disabled');
+        }
+    }
+    catch (err) {
+        console.log('error');
+    }
+})
+
+myApp.onPageInit('reload', function (page) {
+    var user = page.query;
+    var exec_uid = firebase.auth().currentUser.uid;
+
+    console.log(user.name);
+    $$('.name').text(user.name);
+    $$('.uid').text(user.uid);
+    $$('.balance').text(user.balance);
+    $$('.confirm-transaction').on('click', function () {
+        var amount = $$('.amount').val();
+        console.log(amount);
+        if (!amount) {
+            alert('Please enter an amount.');
+            return;
+        }
+
+        myApp.showIndicator();
+        var timestamp = Math.floor(Date.now());
+        firebase.database().ref('users/' + user.uid).update({
+            "balance": parseInt(amount) + parseInt(user.balance)
+        })
+            .then(function () {
+                firebase.database().ref('users/' + user.uid + '/transactions/' + timestamp).update({
+                    "timestamp": timestamp,
+                    "amount": amount,
+                    "operation": "reload"
+                })
+                    .then(function () {
+                        firebase.database().ref('execs/' + exec_uid + '/transactions/' + timestamp).update({
+                            "user_name": user.name,
+                            "user_uid": user.uid,
+                            "timestamp": timestamp,
+                            "amount": amount,
+                            "operation": "reload"
+                        })
+                            .then(function () {
+                                myApp.hideIndicator();
+                                mainView.router.loadPage('main.html');
+                                //$$('.page-on-left').remove();
+                                //mainView.history = ['index.html'];
+                            })
+                            .catch(function (err) {
+                                alert(err);
+                                myApp.hideIndicator();
+                                mainView.router.loadPage('main.html');
+                                //$$('.page-on-left').remove();
+                                //mainView.history = ['index.html'];
+                            });
+                    })
+                    .catch(function (err) {
+                        alert(err);
+                        myApp.hideIndicator();
+                        mainView.router.loadPage('main.html');
+                        //$$('.page-on-left').remove();
+                        //mainView.history = ['index.html'];
+                    });
+            })
+            .catch(function (err) {
+                alert(err);
+                myApp.hideIndicator();
+                mainView.router.loadPage('main.html');
+                //$$('.page-on-left').remove();
+                //mainView.history = ['index.html'];
+            });;
+
+    });
+    
+    //$$(user.name).appendTo('.name');
+    //$$('.reload-details-value .uid').text(user.name);
+
+});
+
+myApp.onPageInit('deduct', function (page) {
+    var user = page.query;
+    var exec_uid = firebase.auth().currentUser.uid;
+
+    console.log(user.name);
+    $$('.name').text(user.name);
+    $$('.uid').text(user.uid);
+    $$('.balance').text(user.balance);
+    $$('.confirm-transaction').on('click', function () {
+        var amount = $$('.amount').val();
+        if (!amount) {
+            alert('Please enter an amount.');
+            return;
+        }
+        if (parseInt(user.balance) - parseInt(amount) < 0) {
+            alert('Insufficient fund.');
+            return;
+        }
+
+        myApp.showIndicator();
+        var timestamp = Math.floor(Date.now());
+        firebase.database().ref('users/' + user.uid).update({
+            "balance": parseInt(user.balance) - parseInt(amount)
+        })
+            .then(function () {
+                firebase.database().ref('users/' + user.uid + '/transactions/' + timestamp).update({
+                    "timestamp": timestamp,
+                    "amount": amount,
+                    "operation": "deduct"
+                })
+                    .then(function () {
+                        firebase.database().ref('execs/' + exec_uid + '/transactions/' + timestamp).update({
+                            "user_name": user.name,
+                            "user_uid": user.uid,
+                            "timestamp": timestamp,
+                            "amount": amount,
+                            "operation": "deduct"
+                        })
+                            .then(function () {
+                                myApp.hideIndicator();
+                                mainView.router.loadPage('main.html');
+                                //$$('.page-on-left').remove();
+                                //mainView.history = ['index.html'];
+                            })
+                            .catch(function (err) {
+                                alert(err);
+                                myApp.hideIndicator();
+                                mainView.router.loadPage('main.html');
+                                //$$('.page-on-left').remove();
+                                //mainView.history = ['index.html'];
+                            });
+                    })
+                    .catch(function (err) {
+                        alert(err);
+                        myApp.hideIndicator();
+                        mainView.router.loadPage('main.html');
+                        //$$('.page-on-left').remove();
+                        //mainView.history = ['index.html'];
+                    });
+            })
+            .catch(function (err) {
+                alert(err);
+                myApp.hideIndicator();
+                mainView.router.loadPage('main.html');
+                //$$('.page-on-left').remove();
+                //mainView.history = ['index.html'];
+            });;
+
+    });
+
+    //$$(user.name).appendTo('.name');
+    //$$('.reload-details-value .uid').text(user.name);
+
+});
+
+myApp.onPageInit('claim', function (page) {
+    var user = page.query;
+    var exec_uid = firebase.auth().currentUser.uid;
+
+    console.log(user.name);
+    $$('.name').text(user.name);
+    $$('.uid').text(user.uid);
+    $$('.points').text(user.points);
+    $$('.confirm-transaction').on('click', function () {
+        var amount = $$('.amount').val();
+        if (!amount) {
+            alert('Please enter an amount.');
+            return;
+        }
+        if (parseInt(user.points) - parseInt(amount) < 0) {
+            alert('Insufficient points.');
+            return;
+        }
+
+        myApp.showIndicator();
+        var timestamp = Math.floor(Date.now());
+        firebase.database().ref('users/' + user.uid).update({
+            "points": parseInt(user.points) - parseInt(amount)
+        }).then(function () {
+            mainView.router.load('main.html');
+            myApp.hideIndicator();
+        }).catch(function (err) {
+            mainView.router.load('main.html');
+            myApp.hideIndicator();
+            alert(err);
+        })
+    });
+});
+
+myApp.onPageInit('info', function (page) {
+    var user = page.query;
+    var exec_uid = firebase.auth().currentUser.uid;
+
+    console.log(user.name);
+    $$('.name').text(user.name);
+    $$('.uid').text(user.uid);
+    $$('.balance').text(user.balance);
+    $$('.points').text(user.points);
+    var date = new Date(user.timestamp_reg);
+    var str = date.toLocaleDateString() + '\n' + date.toLocaleTimeString();
+
+    $$('.date-created').text(str);
+});
