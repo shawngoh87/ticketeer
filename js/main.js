@@ -2,12 +2,13 @@
 var myApp = new Framework7({
     modalTitle: 'Ticketeer',
     material: true,
-    tapHold: true
+    tapHold: true,
+	modalCloseByOutside: true
 });
 var $$ = Dom7;
 var mainView = myApp.addView('.view-main', {});
 
-/* Global Namespace*/
+/* Global Namespace */
 var DB = {};
 DB.exec = null;
 DB.permission = {};
@@ -49,6 +50,7 @@ firebase.auth().onAuthStateChanged(function (user) {
         });
     }
     else {
+        $$('.form-login').show();
         // User signed out.
         // Turn off .on() listeners here.
     }
@@ -57,6 +59,8 @@ firebase.auth().onAuthStateChanged(function (user) {
 function initDB(uid, callback) {
     firebase.database().ref('execs/' + uid).once('value', function (data) {
         var exec = data.val();
+        DB.exec = exec;
+        DB.exec.uid = uid;
         if (exec === null) {
             alert('Unregistered executive.');
             firebase.auth().signOut().then(function () {
@@ -79,7 +83,7 @@ function initDB(uid, callback) {
         });
     }).catch(function (err) {
         alert(err);
-    });;
+    });
 }
 
 function login() {
@@ -341,7 +345,103 @@ function info() {
     );
 }
 
-function addPoints(points) {
+function addPoints() {
+    cordova.plugins.barcodeScanner.scan(
+        function (result) {
+            if (result.cancelled) {
+                mainView.router.loadPage('main.html');
+                return;
+            }
+            var uid = result.text;
+            var user = null;
+            var timestamp = Math.floor(Date.now());
+            var exec_uid = firebase.auth().currentUser.uid;
+            var points = 0;
+
+            myApp.modal({
+                title: 'Add ' + '<span class="txt-slider-points">2</span>' + ' points',
+                text: ' ',
+                afterText: '<div class="range-slider"><input class="val-slider-points" type="range" min="1" max="6" value="2" step="1" name="slider" oninput="$$(\'.txt-slider-points\').text($$(this).val())"/></div>',
+                buttons: [
+                    {
+                        text: 'Cancel',
+                        onClick: function () { }
+                    },
+                    {
+                        text: 'OK',
+                        bold: true,
+                        onClick: function () {
+                            points = parseInt($$('.val-slider-points').val());
+                            myApp.showIndicator();
+                            firebase.database().ref('users/' + uid).once('value', function (data) {
+                                if (data.val() !== null) {
+                                    user = data.val();
+                                    user.uid = uid;
+                                    firebase.database().ref('users/' + uid).update({
+                                        points: user.points + points
+                                    }).then(function () {
+                                        myApp.hideIndicator();
+                                    }).catch(function (err) {
+                                        myApp.hideIndicator();
+                                        alert(err);
+                                    })
+
+                                    myApp.hideIndicator();
+                                }
+                                else {
+                                    alert('User does not exist.');
+                                    mainView.router.loadPage('main.html');
+                                    myApp.hideIndicator();
+                                }
+                            })
+                                .then(function () {
+                                    firebase.database().ref('users/' + user.uid + '/transactions/' + timestamp).update({
+                                        "timestamp": timestamp,
+                                        "amount": points,
+                                        "operation": "add-points"
+                                    })
+                                        .then(function () {
+                                            firebase.database().ref('execs/' + exec_uid + '/transactions/' + timestamp).update({
+                                                "user_name": user.name,
+                                                "user_uid": user.uid,
+                                                "timestamp": timestamp,
+                                                "amount": points,
+                                                "operation": "add-points"
+                                            })
+                                                .then(function () {
+                                                    myApp.hideIndicator();
+                                                    mainView.router.loadPage('main.html');
+                                                })
+                                                .catch(function (err) {
+                                                    alert(err);
+                                                    myApp.hideIndicator();
+                                                    mainView.router.loadPage('main.html');
+                                                });
+                                        })
+                                        .catch(function (err) {
+                                            alert(err);
+                                            myApp.hideIndicator();
+                                            mainView.router.loadPage('main.html');
+                                        });
+                                })
+                                .catch(function (err) {
+                                    alert(err);
+                                    myApp.hideIndicator();
+                                    mainView.router.loadPage('main.html');
+                                });
+                        }
+                    },
+                ]
+            })
+        },
+        function (error) {
+            alert("Scanning failed: " + error);
+            mainView.router.loadPage('main.html');
+        }
+    );
+}
+
+function addPointsSTUB(points) {
 
     cordova.plugins.barcodeScanner.scan(
         function (result) {
@@ -350,12 +450,15 @@ function addPoints(points) {
                 return;
             }
             var uid = result.text;
+            var user = null;
+            var timestamp = Math.floor(Date.now());
+            var exec_uid = firebase.auth().currentUser.uid;
             //TODO: check for result.format and figure out what button triggers result.cancelled.
             myApp.showIndicator();
 
             firebase.database().ref('users/' + uid).once('value', function (data) {
                 if (data.val() !== null) {
-                    var user = data.val();
+                    user = data.val();
                     user.uid = uid;
                     firebase.database().ref('users/' + uid).update({
                         points: user.points + points
@@ -373,19 +476,46 @@ function addPoints(points) {
                     mainView.router.loadPage('main.html');
                     myApp.hideIndicator();
                 }
-            }, function (err) {
-                myApp.hideIndicator();
-                alert(err);
-            }).catch(function (err) {
-                myApp.hideIndicator();
-                alert(err);
-            });
+            })
+                .then(function () {
+                    firebase.database().ref('users/' + user.uid + '/transactions/' + timestamp).update({
+                        "timestamp": timestamp,
+                        "amount": points,
+                        "operation": "add-points"
+                    })
+                        .then(function () {
+                            firebase.database().ref('execs/' + exec_uid + '/transactions/' + timestamp).update({
+                                "user_name": user.name,
+                                "user_uid": user.uid,
+                                "timestamp": timestamp,
+                                "amount": points,
+                                "operation": "add-points"
+                            })
+                                .then(function () {
+                                    myApp.hideIndicator();
+                                    mainView.router.loadPage('main.html');
+                                })
+                                .catch(function (err) {
+                                    alert(err);
+                                    myApp.hideIndicator();
+                                    mainView.router.loadPage('main.html');
+                                });
+                        })
+                        .catch(function (err) {
+                            alert(err);
+                            myApp.hideIndicator();
+                            mainView.router.loadPage('main.html');
+                        });
+                })
+                .catch(function (err) {
+                    alert(err);
+                    myApp.hideIndicator();
+                    mainView.router.loadPage('main.html');
+                });
         },
         function (error) {
             alert("Scanning failed: " + error);
             mainView.router.loadPage('main.html');
-            //$$('.page-on-left').remove();
-            //mainView.history = ['index.html'];
         }
     );
 }
@@ -643,7 +773,6 @@ function history() {
         var arr = [];
         /* Stores in an array and reverse the array later */
         for (var eachHistory in history) {
-
             arr.push(eachHistory);
         }
 
@@ -651,23 +780,46 @@ function history() {
         for (var i = arr.length - 1; i >= 0; i--) {
 
             var color = '';
+            var op = '';
             console.log(history[arr[i]]);
             var historyInstance = history[arr[i]];
             switch (historyInstance.operation) {
                 case 'reload':
                     color = 'bg-lightgreen'; // Default colors of F7
+                    op = 'Reload';
                     break;
                 case 'deduct':
                     color = 'bg-red';
+                    op = 'Deduct';
+                    break;
+                case 'add-points':
+                    color = 'bg-orange';
+                    op = 'Add points';
+                    break;
+                case 'claim-points':
+                    color = 'bg-yellow';
+                    op = 'Claim gift';
                     break;
             }
 
             // For readability purpose
             var str1 = '<div class="card ' + color + '"> <div class="card-header"><div class="col-75">';
             var name = historyInstance.user_name;
-            var str3 = '</div> <div class="col-25">';
+            var str2 = '</div> <div class="col-25">';
             var amt = historyInstance.amount;
-            var str4 = '</div> </div> </div>';
+            var str3 = '</div> </div> <div class="card-footer"><div class="col-50">';
+            var dateUTC = new Date(historyInstance.timestamp);
+            var date = dateUTC.toLocaleDateString() + '\t' + dateUTC.toLocaleTimeString();
+            var str4 = '</div><div class="col-50">';
+            var str5 = '</div></div></div>';
+
+            // Add negative sign for claim and deduct
+            switch (historyInstance.operation) {
+                case 'deduct':
+                case 'claim-points':
+                    amt = '-' + amt;
+                    break;
+            }
 
             // If need to display more info, use this:
             //var str1 = '<div class="card"> <div class="card-header">';
@@ -678,7 +830,8 @@ function history() {
             //var amt = historyInstance.amount;
             //var str4 = '</div> </div> </div>';
 
-            pageContent += (str1 + name + str3 + amt + str4);
+            pageContent += (str1 + name + str2 + amt + str3 + date + str4 + op + str5);
+            //pageContent += (str1 + name + str2 + op + str3 + amt + str4);
         }
 
         mainView.loadContent(pageContentHeader + pageContent + pageContentFooter);
@@ -692,36 +845,43 @@ function history() {
 /* Management */
 function manageView() {
     myApp.showIndicator();
-    var pageHeader = '<div class="page" data-page="manage-view"><div class="navbar"><div class="navbar-inner"><div class="left"><a class="back link icon-only" href="index.html"><i class="icon icon-back"></i></a></div><div class="center">View Management</div></div></div><div class="page-content">';
-    var pageFooter = '</div></div>';
-    var pageContent = '';
-    firebase.database().ref('admin/clearance/').once('value', function (data) {
-        /*  Sort access level, load the title blocks to DOM.   
-            Then append each execs into the list blocks. 
-            FIXIT: Database design is flawed, one function should only retrieve once.*/
-        var clearances = data.val();
-        var accessList = [];
-        for (var accessId in clearances){
-            accessList.push(accessId);
-        }
-        accessList.sort(sortAlphaNum);
-        accessList.forEach(function (val, _, _) {
-            pageContent += '<div class="access-block" style="display:none"><div class="content-block-title" >' + clearances[val].description + '</div>';
-            pageContent += '<div class="list-block""><ul class="' + val + '-list"></ul></div></div>';
-        });
-        var strPage = pageHeader + pageContent + pageFooter;
-        mainView.loadContent(strPage); // Load to DOM
-        firebase.database().ref('execs/').once('value', function (data) {
-            var execs = data.val();
-            for (var exec_uid in execs) {
-                var exec = execs[exec_uid];
-                var accessClass = '.' + exec.clearance.access + '-list';
-                var str1 = '<li><a href="#" class="item-link item-content" onclick="manageViewSpecificExec(\'' + exec_uid + '\')"> <div class="item-inner"> <div class="item-title">';
-                var str2 = '</div> </div></a></li>';
-                $$(accessClass).append(str1 + exec.name + str2);
-                $$(accessClass).closest('.access-block').show();
-            }
+    firebase.database().ref('execs/' + DB.exec.uid + '/clearance/access').once('value', function (perm) {
+        if (perm.val() !== 'A1' && perm.val() !== 'B1') {
             myApp.hideIndicator();
+            alert('Please contact an Admin or Moderator');
+            return;
+        }
+        var pageHeader = '<div class="page" data-page="manage-view"><div class="navbar"><div class="navbar-inner"><div class="left"><a class="back link icon-only" href="index.html"><i class="icon icon-back"></i></a></div><div class="center">View Management</div></div></div><div class="page-content">';
+        var pageFooter = '</div></div>';
+        var pageContent = '';
+        firebase.database().ref('admin/clearance/').once('value', function (data) {
+            /*  Sort access level, load the title blocks to DOM.   
+                Then append each execs into the list blocks. 
+                FIXIT: Database design is flawed, one function should only retrieve once.*/
+            var clearances = data.val();
+            var accessList = [];
+            for (var accessId in clearances) {
+                accessList.push(accessId);
+            }
+            accessList.sort(sortAlphaNum);
+            accessList.forEach(function (val, _, _) {
+                pageContent += '<div class="access-block" style="display:none"><div class="content-block-title" >' + clearances[val].description + '</div>';
+                pageContent += '<div class="list-block""><ul class="' + val + '-list"></ul></div></div>';
+            });
+            var strPage = pageHeader + pageContent + pageFooter;
+            mainView.loadContent(strPage); // Load to DOM
+            firebase.database().ref('execs/').once('value', function (data) {
+                var execs = data.val();
+                for (var exec_uid in execs) {
+                    var exec = execs[exec_uid];
+                    var accessClass = '.' + exec.clearance.access + '-list';
+                    var str1 = '<li><a href="#" class="item-link item-content" onclick="manageViewSpecificExec(\'' + exec_uid + '\')"> <div class="item-inner"> <div class="item-title">';
+                    var str2 = '</div> </div></a></li>';
+                    $$(accessClass).append(str1 + exec.name + str2);
+                    $$(accessClass).closest('.access-block').show();
+                }
+                myApp.hideIndicator();
+            });
         });
     });
 }
@@ -1102,7 +1262,7 @@ myApp.onPageInit('deduct', function (page) {
                 mainView.router.loadPage('main.html');
                 //$$('.page-on-left').remove();
                 //mainView.history = ['index.html'];
-            });;
+            });
 
     });
 
@@ -1134,14 +1294,42 @@ myApp.onPageInit('claim', function (page) {
         var timestamp = Math.floor(Date.now());
         firebase.database().ref('users/' + user.uid).update({
             "points": parseInt(user.points) - parseInt(amount)
-        }).then(function () {
-            mainView.router.load('main.html');
-            myApp.hideIndicator();
-        }).catch(function (err) {
-            mainView.router.load('main.html');
-            myApp.hideIndicator();
-            alert(err);
         })
+            .then(function () {
+                firebase.database().ref('users/' + user.uid + '/transactions/' + timestamp).update({
+                    "timestamp": timestamp,
+                    "amount": amount,
+                    "operation": "claim-points"
+                })
+                    .then(function () {
+                        firebase.database().ref('execs/' + exec_uid + '/transactions/' + timestamp).update({
+                            "user_name": user.name,
+                            "user_uid": user.uid,
+                            "timestamp": timestamp,
+                            "amount": amount,
+                            "operation": "claim-points"
+                        })
+                            .then(function () {
+                                myApp.hideIndicator();
+                                mainView.router.loadPage('main.html');
+                            })
+                            .catch(function (err) {
+                                alert(err);
+                                myApp.hideIndicator();
+                                mainView.router.loadPage('main.html');
+                            });
+                    })
+                    .catch(function (err) {
+                        alert(err);
+                        myApp.hideIndicator();
+                        mainView.router.loadPage('main.html');
+                    });
+            })
+            .catch(function (err) {
+                alert(err);
+                myApp.hideIndicator();
+                mainView.router.loadPage('main.html');
+            });
     });
 });
 
