@@ -83,7 +83,7 @@ function initDB(uid, callback) {
         });
     }).catch(function (err) {
         alert(err);
-    });
+        });
 }
 
 function login() {
@@ -781,7 +781,6 @@ function history() {
 
             var color = '';
             var op = '';
-            console.log(history[arr[i]]);
             var historyInstance = history[arr[i]];
             switch (historyInstance.operation) {
                 case 'reload':
@@ -918,22 +917,52 @@ function manageViewSpecificExec(uid) {
                         changeRole('Moderator');
                     }
                 },
+                //{
+                //    text: 'Executive',
+                //    onClick: function () {
+                //        changeRole('Executive');
+                //    }
+                //},
+                //{
+                //    text: 'Reload-only',
+                //    onClick: function () {
+                //        changeRole('Reload-only');
+                //    }
+                //},
+                //{
+                //    text: 'Deduct-only',
+                //    onClick: function () {
+                //        changeRole('Deduct-only');
+                //    }
+                //},
+                //{
+                //    text: 'Unassigned',
+                //    onClick: function () {
+                //        changeRole('Unassigned');
+                //    }
+                //},
                 {
-                    text: 'Executive',
+                    text: 'Entrance',
                     onClick: function () {
-                        changeRole('Executive');
+                        changeRole('Entrance');
                     }
                 },
                 {
-                    text: 'Reload-only',
+                    text: 'Game station',
                     onClick: function () {
-                        changeRole('Reload-only');
+                        changeRole('Game station');
                     }
                 },
                 {
-                    text: 'Deduct-only',
+                    text: 'Hexabot',
                     onClick: function () {
-                        changeRole('Deduct-only');
+                        changeRole('Hexabot');
+                    }
+                },
+                {
+                    text: 'Gift claiming',
+                    onClick: function () {
+                        changeRole('Gift claiming');
                     }
                 },
                 {
@@ -961,6 +990,10 @@ function manageViewSpecificExec(uid) {
             'Executive': 'C1',
             'Reload-only': 'C2',
             'Deduct-only': 'C3',
+            'Entrance': 'C4',
+            'Game station': 'C5',
+            'Hexabot': 'C6',
+            'Gift claiming': 'C7',
             'Unassigned': 'X'
         }
 
@@ -971,51 +1004,28 @@ function manageViewSpecificExec(uid) {
             description: role
         })
             .then(function () {
-                alert('Successfully updated!');
-                mainView.router.loadPage('main.html');
-                $$('.page-on-left').remove();
-                mainView.history = ['index.html'];
-                myApp.hideIndicator();
+                var timestamp = Math.floor(Date.now());
+                firebase.database().ref('admin/history/' + timestamp).update({
+                    exec: uid,
+                    to_role: role,
+                    changed_by: DB.exec.uid,
+                    timestamp: timestamp
+                }).then(function () {
+                    alert('Successfully updated!');
+                    mainView.router.loadPage('main.html');
+                    myApp.hideIndicator();
+                    }).catch(function (err) {
+                        mainView.router.loadPage('main.html');
+                        myApp.hideIndicator();
+                        alert(err);
+                    })
             })
             .catch(function (err) {
                 mainView.router.loadPage('main.html');
-                $$('.page-on-left').remove();
-                mainView.history = ['index.html'];
                 myApp.hideIndicator();
                 alert(err);
             });
     }
-    //var clearanceList = {};
-    //firebase.database().ref('admin/clearance').once('value', function (data) {
-    //    clearanceList = data.val();
-    //    console.log(clearanceList);
-        
-    //    myApp.prompt('', 'Change role', function (data) {
-
-    //        myApp.hideIndicator();
-    //        var found = 0;
-    //        for (var clearance in clearanceList) {
-    //            console.log(clearance);
-    //            if (data === clearance) {
-    //                found = 1;
-    //                break;
-    //            }
-    //        }
-
-    //        if (found) {
-    //            firebase.database().ref('execs/' + uid + '/clearance').update({
-    //                access: data,
-    //                description: clearanceList[data].description
-    //            })
-    //            .then(function () {
-    //                alert('Successfully updated!');
-    //            });
-    //        }
-    //    }, function () {
-    //        myApp.hideIndicator();
-    //    });
-    //});
-    
 }
 
 function manageViewSpecificExecSTUB(uid) {
@@ -1093,11 +1103,9 @@ myApp.onPageInit('main', function (page) {
     /* Enable/Disable operation buttons based on role assigned */
     $$('.menu-reload').css('pointer-events', 'none');
     $$('.menu-deduct').css('pointer-events', 'none');
-    //$$('.menu-info').css('pointer-events', 'none');
     $$('.menu-claim').css('pointer-events', 'none');
     $$('.menu-add-points').css('pointer-events', 'none');
     $$('.menu-add-user').css('pointer-events', 'none');
-    //$$('.menu-history').css('pointer-events', 'none');
     $$('.menu-manage').css('pointer-events', 'none');
     try{
         if (DB.permission.accessables.operation.reload) {
@@ -1120,7 +1128,7 @@ myApp.onPageInit('main', function (page) {
         }
     }
     catch (err) {
-        console.log('error');
+        console.log('error: ' + err);
     }
 })
 
@@ -1268,7 +1276,6 @@ myApp.onPageInit('deduct', function (page) {
 
     //$$(user.name).appendTo('.name');
     //$$('.reload-details-value .uid').text(user.name);
-
 });
 
 myApp.onPageInit('claim', function (page) {
